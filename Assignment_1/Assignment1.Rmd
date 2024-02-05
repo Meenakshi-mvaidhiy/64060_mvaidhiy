@@ -1,0 +1,189 @@
+---
+title: "Assignment 1"
+author: "Meenakshi Vaidhiyanathan"
+date: "2024-02-05"
+output: pdf_document
+---
+
+## Dataset: 
+The dataset used for this project can be found here:  
+<https://www.kaggle.com/datasets/yasserh/housing-prices-dataset>.
+
+
+## Setup: 
+
+Libraries used :  
+
+```{r setup, include=TRUE, echo=FALSE}
+library(dplyr) 
+library(ggplot2)
+```
+
+Loading the dataset : 
+```{r load, include=TRUE}
+housingData <- read.csv("./housing.csv")
+head(housingData)
+```
+  
+  
+## Descriptive statistics for quantitative variables:
+  
+  
+The `beds` variable includes results on the number of houses with their respective bedrooms. For eg: 136 houses have 2 bedrooms. 
+```{r bedrooms}
+beds<-table(housingData$bedrooms) 
+head(beds)                      
+```
+  
+  
+The `bath` variable includes results on the number of houses with their respective bathrooms. For eg: 401 houses have 1 bathroom. 
+```{r bathrooms}
+bath<-table(housingData$bathrooms)
+head(bath)
+```
+  
+  
+The `stories` variable includes results on the number of houses that are single, double, triple or quadruple storied building. For eg: 227 housese have are single storied. 
+```{r stories}
+stories<-table(housingData$stories)
+head(stories)
+```
+  
+  
+The code below calculates the average price and the median value of the price of the houses.
+```{r Price}
+mean(housingData$price)
+median(housingData$price)
+```
+  
+  
+The `order()` function is used on the dataset housingData to express values of area in descending order. The `head()` function is then used to print the valueof the house with highest area while the `tail()` function is used to print the value of the house with lowest area. 
+```{r area}
+highestAreaTable <-housingData[order(housingData$area,decreasing = TRUE),]
+highAreaInfo<-head(highestAreaTable,1) 
+lowAreaInfo<-tail(highestAreaTable,1)
+highAreaInfo
+lowAreaInfo
+```
+  
+  
+The `park` variable is used to store the number of houses with their respective parking facilities. For eg: 299 houses have zero parking facility. 
+```{r parking}
+park<-table(housingData$parking)
+park 
+```
+
+
+### Descriptive statistics for categorical variables
+  
+  
+The `num_ac` variable stores the number of houses with or without air conditioning. 
+```{r airconditioning}
+num_ac<-table(housingData$airconditioning)
+num_ac
+```
+  
+  
+The `num_furnishing` variable stores the number of houses that are furnished, semi-furnished and unfurnished.  
+
+```{r furnishing}
+num_furnishing<-table(housingData$furnishingstatus)
+num_furnishing
+```
+  
+  
+The `num_hotwaterheating` variable stores the number of houses that are with or without hot water heating facility. 
+```{r hotwaterheating}
+num_hotwaterheating<-table(housingData$hotwaterheating)
+num_hotwaterheating
+```
+
+  
+  
+The `num_mainroad` variable stores the number of houses that are on the mainroad. 
+```{r mainroad}
+num_mainroad<-table(housingData$mainroad)
+num_mainroad
+```
+  
+  
+The following code lists houses which have both air conditioning and hot water heating facilities. 
+The `filter()` function filters the row of such houses that abide by the two conditions. The function was used as it supports conditions across multiple columns. 
+```{r aircon and hotwater}
+print(filter(housingData,(housingData$airconditioning== 'yes' & housingData$hotwaterheating=='yes')))
+```
+  
+  
+
+## Transform Variable
+  
+  
+The dataset contained the absolute pricing of houses. It was transformed to be expressed as a multiple of 100,000. 
+```{r transform, echo=TRUE}
+priceperhunk<-housingData$price/100000
+head(priceperhunk, 30)
+```
+
+
+## Plots
+
+### Plotting quantitative variable:
+  
+  
+The following histogram `hist()` plots the number of houses in the dataset vs the number of bedrooms.
+```{r bedroomsplot, echo=FALSE}
+# main() : the title of the graph
+# col : color of the plot
+# xlab : title of the x-axis
+hist(housingData$bedrooms, main ="Number of houses with bedrooms", col= "purple", xlab = "bedrooms")
+```
+  
+  
+The following histogram `hist()` plots the number of houses in the dataset vs the number of parking spots.
+```{r parkingspotplot, echo=FALSE}
+# main() : the title of the graph
+# col : color of the plot
+# xlab : title of the x-axis
+hist(housingData$parking, main ="Number of houses with parking", col = "yellow", xlab="parking")
+```
+
+
+
+### Plotting a scatter plot
+  
+  
+The following plot depicts the price of the house in the dataset vs the number of bedrooms. The plot illustrates the variability in price based on the number of bedrooms.  
+
+```{r bedroomsscatterplot, echo=FALSE}
+# main() : the title of the graph
+# col : color of the plot
+# xlab : title of the x-axis
+# ylab : title of the y-axis
+plot(housingData$price/100000,housingData$bedrooms, main="Scatter plot of price vs bedrooms", col="blue", xlab="Price", ylab="Bedrooms")
+```
+
+  
+  
+The following plot illustrates the area of the house vs the number of parking spots available.  
+
+```{r areaparkingplot, echo=FALSE}
+# main() : the title of the graph
+# col : color of the plot
+# xlab : title of the x-axis
+# ylab : title of the y-axis
+plot(housingData$area,housingData$parking, main = "Scatter plot of Area vs Parking", col="orange", xlab = "Area", ylab = "Parking")
+```
+
+
+### Plotting of a categorical variable
+  
+  
+- The following plot illustrates a categorical value i.e. `hotwaterheating` of values yes or no. 
+- The function `ggplot()` was used as it allowed for plotting of categorical data. The `geom_bar()` function was used to depict a bar graph. The `aes()` or aesthetic function was needed to specify the categorical variable against the axis of the graph. Documentation for the `aes()` function can be found at <https://www.rdocumentation.org/packages/ggplot2/versions/3.4.4/topics/aes>. 
+
+```{r hotwaterheatingplot, echo=FALSE}
+ggplot(housingData, aes(x=hotwaterheating)) + geom_bar()
+```
+  
+  
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
