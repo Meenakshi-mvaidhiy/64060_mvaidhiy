@@ -1,0 +1,210 @@
+---
+title: "FML Assignment 2"
+output: pdf_document
+date: "2024-02-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(class)
+library(caret)
+library(e1071)
+library(ISLR)
+```
+
+Loading the data using read.csv. There are 14 columns and 5000 observations. 
+```{r step1}
+dataset <- read.csv("./UniversalBank.csv")
+dim(dataset)
+```
+
+Removing the columns ID and Zip code from the dataset. 
+```{r step2}
+dataset <- dataset[,-c(1,5)]
+```
+
+## Data splitting. 
+Transformation of categorical variables with numerical values into factors is performed. The `dummyVars()` function is used to create dummy variables for the values in the Education column. This is then applied to the dataset using `predict()` function. The `set.seed()` function helps maintain uniformity in values even if the code is executed multiple times. The Dataset is split into `train_dataset` as 60% of the observations while the rest 40% are set as `valid_dataset` as mentioned in the question. Education contains three categories which on substituting with dummy variables is converted to binary output variables of 0 and 1. 
+```{r step3}
+dataset$Education <- as.factor(dataset$Education)
+
+categories <- dummyVars(~., data = dataset) ## Converting education to dummy categories
+dataset <- as.data.frame(predict(categories,dataset))
+
+
+set.seed(1)  
+training_indices <- sample(row.names(dataset), 0.6*dim(dataset)[1])
+validation_indices <- setdiff(row.names(dataset), training_indices)  
+train_dataset <- dataset[training_indices,]
+valid_dataset <- dataset[validation_indices,]
+t(t(names(train_dataset)))
+```
+
+Normalization of data is done using the z-score normalization method by passing the "center", "scale" into `method()` function. The function `preProcess()` performs normalization which is then applied to both training and validation dataset using the `predict()` function. The column with personal laon shouldn't be used for normalization and hence excluded.
+```{r step4}
+normalized.train <- train_dataset[,-10] 
+normalized.valid <- valid_dataset[,-10]
+
+normalized.values <- preProcess(train_dataset[, -10], method=c("center", "scale"))
+normalized.train <- predict(normalized.values, train_dataset[, -10])
+normalized.valid <- predict(normalized.values, valid_dataset[, -10])
+```
+
+
+# The following are the details provided about the first customer.
+1. Age = 40, Experience = 10, Income = 84, Family = 2, CCAvg = 2, Education_1 = 0, Education_2 = 1, Education_3 = 0, Mortgage = 0, Securities Account = 0, CD Account = 0, Online = 1, and Credit Card = 1. 
+
+The details of the first customer are loaded as a dataframe into customer1. This is then normalised using the `normalized.values` model and applied using the `predict()` function to store the normalised vlaues of the first customer in `normalized_customer1`.
+```{r step5}
+customer1 <- data.frame(
+  Age = 40,
+  Experience = 10,
+  Income = 84,
+  Family = 2,
+  CCAvg = 2,
+  Education.1 = 0,
+  Education.2 = 1,
+  Education.3 = 0,
+  Mortgage = 0,
+  Securities.Account = 0,
+  CD.Account = 0,
+  Online = 1,
+  CreditCard = 1
+)
+
+normalized_customer1 <- customer1
+normalized_customer1 <- predict(normalized.values, normalized_customer1)
+
+```
+
+
+k-NN classification is performed and printed as `knn_predictor` using the `knn()` function in the `class` library. The k value is set to 1 as mentioned in the question.
+
+The classification of the customer is "0". This means the customer would not accept the personal loan as printed by `knn_predictor`.
+```{r step6}
+
+knn_predictor <- class::knn(train = normalized.train, 
+                       test = normalized_customer1, 
+                       cl = train_dataset$Personal.Loan, k = 1)
+knn_predictor
+
+```
+
+#Choice of k.
+The accuracy with respect to validation set is calculated using k-NN for each value of k from 1 to 15. The `plot()` function is used to strike a value for k such that it balances between overfitting and underfitting without the inclusion of noise in the data. The k value was found to be 3. Accuracy is plotted on the y-axis across the different values of k along the x-axis.
+```{r step7}
+accuracyK <- data.frame(k = seq(1, 15, 1), overallaccuracy = rep(0, 15))
+for(i in 1:15) {
+  knn_predictor <- class::knn(train = normalized.train, 
+                         test = normalized.valid, 
+                         cl = train_dataset$Personal.Loan, k = i)
+  accuracyK[i, 2] <- confusionMatrix(knn_predictor, 
+                                       as.factor(valid_dataset$Personal.Loan),positive = "1")$overall[1]
+}
+
+selectedK <- which(accuracyK[,2] == max(accuracyK[,2])) 
+
+print(paste("The selected k value is: ",selectedK))
+plot(accuracyK$k,accuracyK$overallaccuracy,xlab="value of k",ylab="Accuracy")
+
+```
+
+#Confusion matrix for validation data
+The given value of k for confusion matrix is 3. The same is performed using the `confusionMatrix()` function and is printed as `selectedk_matrix`. Here Personal Loan column is converted as factor. 
+```{r step8}
+knn_predictor <- class::knn(train = normalized.train, 
+                         test = normalized.valid, 
+                         cl = train_dataset$Personal.Loan, k = 3)
+
+selectedk_matrix <- confusionMatrix(knn_predictor, 
+                                       as.factor(valid_dataset$Personal.Loan),positive = "1")
+selectedk_matrix
+```
+
+
+The following details about the customer was provided:
+Age = 40, Experience = 10, Income = 84,Family = 2, CCAvg = 2, Education_1 = 0, Education_2 = 1, Education_3 = 0,Mortgage = 0, Securities Account = 0, CD Account = 0, Online = 1 and CreditCard = 1. This was stored as a data frame in `customer2`.
+This was then normalized using the `normalized.values` which has the `preProcess()` function and applied using the `predict()` function. This was set to `normalized_customer2`.
+```{r step9}
+customer2 <- data.frame(
+  Age = 40,
+  Experience = 10,
+  Income = 84,
+  Family = 2,
+  CCAvg = 2,
+  Education.1 = 0,
+  Education.2 = 1,
+  Education.3 = 0,
+  Mortgage = 0,
+  Securities.Account = 0,
+  CD.Account = 0,
+  Online = 1,
+  CreditCard = 1
+)
+
+normalized_customer2 <- customer2
+normalized_customer2 <- predict(normalized.values,normalized_customer2)
+```
+
+k-NN is perfomred on the `normalized_customer2` using the previously identified k value of 3.
+The customer is classified as "0",that means no personal loan.
+```{r step10}
+knn_predictor <- class::knn(train = normalized.train, 
+                       test = normalized_customer2, 
+                       cl = train_dataset$Personal.Loan, k = 3)
+knn_predictor
+```
+
+#Re-partitioning data
+The dataset was re-partitioned into training, validation and test sets with 50%, 30% and 20% of the observations respectively and printed as `new_training_set`, `new_valid_set`, `new_test_set`. 
+```{r step11}
+#Re partitioning the data.
+new_training_index <- sample(row.names(dataset), 0.5*dim(dataset)[1])
+new_valid_index <- sample(setdiff(row.names(dataset), new_training_index), 0.3*dim(dataset)[1])
+new_test_index <- setdiff(setdiff(row.names(dataset), new_training_index), new_valid_index)
+new_training_set <- dataset[new_training_index,]
+new_valid_set <- dataset[new_valid_index,]
+new_test_set <- dataset[new_test_index,]
+```
+
+Normalization of the data is performed using the `preProcess()` and `predict()` functions on all of the new training, validation and test datasets. 
+```{r step12}
+new_train_norm <- new_training_set[,-10] # Note that Personal Income is the 10th variable
+new_valid_norm <- new_valid_set[-10]
+new_test_norm <- new_test_set[-10]
+
+new_norm <- preProcess(new_training_set[, -10], method=c("center", "scale"))
+new_train_norm <- predict(new_norm, new_training_set[, -10])
+new_valid_norm <- predict(new_norm, new_valid_set[, -10])
+new_test_norm<-  predict(new_norm, new_test_set[-10])
+```
+
+Using the `knn()`funtion and the `confusionMatrix()` functions led to the identification that model performs well on training data. 
+```{r step13} 
+knn_train_predictor <- class::knn(train = new_train_norm, 
+                         test = new_train_norm, 
+                         cl = new_training_set$Personal.Loan, k = 3)
+
+training_matrix <- confusionMatrix(knn_train_predictor,as.factor(new_training_set$Personal.Loan),positive = "1")
+training_matrix
+```
+
+Using the `knn()`funtion and the `confusionMatrix()` functions on validation data. 
+```{r step14}
+knn_valid_predictor <- class::knn(train = new_train_norm, 
+                         test = new_valid_norm, 
+                         cl = new_training_set$Personal.Loan, k = 3)
+validation_matrix <- confusionMatrix(knn_valid_predictor,as.factor(new_valid_set$Personal.Loan),positive = "1")
+validation_matrix
+```
+
+Using the `knn()`and the `confusionMatrix()` functions on test data.
+
+The accuracy of training set is greater than validation and testing data. Accuracy of test set is higher than validation set. This is described as overfitting. The inability of the model to generalise when new test set is provided leads to overfitting of the model. 
+```{r step15}
+knn_test_predictor <- class::knn(train = new_train_norm, 
+                         test = new_test_norm, 
+                         cl = new_training_set$Personal.Loan, k = 3)
+testing_matrix <- confusionMatrix(knn_test_predictor,as.factor(new_test_set$Personal.Loan),positive = "1")
+testing_matrix
+```
