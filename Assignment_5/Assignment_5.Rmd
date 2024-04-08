@@ -1,0 +1,187 @@
+---
+title: "FML Assignment 5"
+author: "Meenakshi Vaidhiyanathan"
+date: "2024-04-07"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading relevant libraries
+```{r}
+library(cluster)
+library(caret)
+library(dendextend)
+library(knitr)
+library(factoextra)
+library(readr)
+```
+
+Creating a dataset that includes numbers and omiting all the NA values in the dataset. This is stored in `cereals.df`. The function `scale()` is used to normalize the data. Ecucliedean distance is used to apply hirarchial clustering and is stored in `distance_eu`. Plotting the dendrogram using the plot() function. 
+```{r}
+library(readr)
+Cereals <- read_csv("~/Downloads/Cereals.csv")
+cereals.df<- data.frame(Cereals[,4:16])
+cereals.df <- na.omit(cereals.df)
+cereals.df_scaled <- scale(cereals.df)
+distance_eu <- dist(cereals.df_scaled, method = "euclidean")
+hierarchial_complete <- hclust(distance_eu, method = "complete")
+plot(hierarchial_complete, cex = 0.7, hang = -1)
+```
+
+
+`agnes()` function is used to implement clustering with single, complete, average and ward linkage. The single linkage is printed using the `print()` function. 
+```{r}
+hierarchial_single <- agnes(cereals.df_scaled, method = "single")
+hierarchial_complete <- agnes(cereals.df_scaled, method = "complete")
+hierarchial_avg <- agnes(cereals.df_scaled, method = "average")
+hierarchial_ward <- agnes(cereals.df_scaled, method = "ward")
+print(hierarchial_single$ac) 
+```
+
+Complete linkage is printed below. 
+```{r}
+print(hierarchial_complete$ac)
+```
+Average linkage is printed below.
+```{r}
+print(hierarchial_avg$ac)
+```
+Ward hierarchial linkage is printed below. 
+The ward method is chosen given the fact that it has the highest value of 0.9046042 in comparison to other linkages. 
+```{r}
+print(hierarchial_ward$ac)
+```
+
+The `pltree()` and the `rect.hclust()` function is used to represent the dendrogram of agnes using the ward linkage. 
+```{r}
+pltree(hierarchial_ward, cex = 0.7, hang = -1, main = "Dendrogram of agnes Using Ward")
+rect.hclust(hierarchial_ward, k = 5, border = 1:4)
+```
+
+The `fviz_cluster()` function is used to form clusters as represented below. 
+```{r}
+Cluster_1 <- cutree(hierarchial_ward, k=5)
+df_2 <- as.data.frame(cbind(cereals.df_scaled,Cluster_1))
+fviz_cluster(list(data = df_2 , cluster = Cluster_1))
+```
+
+Five clusters are chosen after observing the distance. Creating partitions and determining the stability and structure of the clusters. By considering k=5, hierarchial clustering is performed. 
+```{r}
+set.seed(123)
+Partition_1 <- cereals.df[1:50,]
+Partition_2 <- cereals.df[51:74,]
+single_agnes <- agnes(scale(Partition_1), method = "single")
+single_agnes
+```
+```{r}
+Complete_agnes <- agnes(scale(Partition_1), method = "complete")
+Complete_agnes
+```
+
+```{r}
+Avg_agnes <- agnes(scale(Partition_1), method = "average")
+Avg_agnes
+```
+
+```{r}
+Ward_agnes <- agnes(scale(Partition_1), method = "ward")
+Ward_agnes
+```
+
+```{r}
+cbind(single=single_agnes$ac , complete=Complete_agnes$ac , average= Avg_agnes$ac , ward= Ward_agnes$ac)
+pltree(Ward_agnes, cex = 0.6, hang = -1, main = "Dendrogram of Agnes with Partitioned Data (Using Ward)")
+rect.hclust(Ward_agnes, k = 5, border = 1:4)
+```
+
+The centroids are calculated as seen below.
+```{r}
+cutree_2 <- cutree(Ward_agnes, k = 5)
+result <- as.data.frame(cbind(Partition_1, cutree_2))
+result[result$cutree_2==1,]
+```
+`centroid.1` stores the centroid 1. 
+```{r}
+centroid.1 <- colMeans(result[result$cutree_2==1,])
+result[result$cutree_2==2,]
+```
+
+`centroid.2`stores the centroid 2. 
+```{r}
+centroid.2 <- colMeans(result[result$cutree_2==2,])
+result[result$cutree_2==3,]
+```
+
+`centroid.3` stores the centroid 3. 
+```{r}
+centroid.3 <- colMeans(result[result$cutree_2==3,])
+result[result$cutree_2==4,]
+```
+
+`centroid.4` stores the centroid 4. 
+```{r}
+centroid.4 <- colMeans(result[result$cutree_2==4,])
+all_centroids <- rbind(centroid.1, centroid.2, centroid.3, centroid.4)
+all_centroids
+```
+The distance is calculated and stored in `Distance_1`. 
+```{r}
+z <- as.data.frame(rbind(all_centroids[,-14], Partition_2))
+Distance_1 <- get_dist(z)
+Matrix.1 <- as.matrix(Distance_1)
+dataf_1 <- data.frame(data=seq(1,nrow(Partition_2),1), Clusters = rep(0,nrow(Partition_2)))
+for(i in 1:nrow(Partition_2)) 
+{dataf_1[i,2] <- which.min(Matrix.1[i+4, 1:4])}
+dataf_1
+```
+
+```{r}
+cbind(df_2$Cluster_1[51:74], dataf_1$Clusters)
+```
+
+```{r}
+table(df_2$Cluster_1[51:74] == dataf_1$Clusters)
+```
+
+The data is partially stable as there are 12 TRUE and FALSE in count respectively. 
+```{r}
+#Since we are getting 12 FALSE and 12 TRUE, we can conclude that the model is partially stable by looking at the data.
+Health.Cereals <- Cereals
+Health.Cereals_na <- na.omit(Health.Cereals)
+Healthy.Cluster <- cbind(Health.Cereals_na, Cluster_1)
+Healthy.Cluster[Healthy.Cluster$Cluster_1==1,]
+```
+
+```{r}
+Healthy.Cluster[Healthy.Cluster$Cluster_1==2,]
+```
+
+```{r}
+Healthy.Cluster[Healthy.Cluster$Cluster_1==3,]
+```
+
+```{r}
+Healthy.Cluster[Healthy.Cluster$Cluster_1==4,]
+```
+
+```{r}
+#Mean ratings to determine the best cluster.
+mean(Healthy.Cluster[Healthy.Cluster$Cluster_1==1,"rating"])
+```
+
+```{r}
+mean(Healthy.Cluster[Healthy.Cluster$Cluster_1==2,"rating"])
+```
+
+```{r}
+mean(Healthy.Cluster[Healthy.Cluster$Cluster_1==3,"rating"])
+```
+
+The mean of `Cluster_1` is 73.84446 which is the highest. Hence Cluster_1 is chosen for a healthier cereal to the menu. 
+With respect to this dataset, normalization of numerical measurements is performed using the `scale()` function. This is due to the fact that Euclidean distance is used and this parameter calculates the distance. This is highly scale dependent, sensitive to outliers and change in units of one variable have high influence on the results. 
+```{r}
+mean(Healthy.Cluster[Healthy.Cluster$Cluster_1==4,"rating"])
+```
