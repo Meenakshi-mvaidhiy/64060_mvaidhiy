@@ -1,0 +1,460 @@
+---
+title: "Final project"
+author: "Meenakshi Vaidhiyanathan and Pooja Nagaraju "
+date: "2024-04-21"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+Loading the required libraries
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE )
+library(readr)
+library(class)
+library(ISLR)
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(pROC)
+library(gmodels)
+library(modeest)
+library(moments)
+library(ggcorrplot)
+library(car)
+library(DataExplorer)
+library(skimr)
+```
+
+Loading the dataset
+```{r}
+Airlines <- read.csv("~/Desktop/Final project/Airlines.csv")
+head(Airlines)
+```
+Using the `dim()` function to look at the number of rows and columns in the dataset
+```{r}
+dim(Airlines)
+```
+Displaying the structure of the dataset using the `str()` function
+```{r}
+str(Airlines)
+```
+
+Generating a table to count the missing values using the `is.na()` function in the Airlines dataset.
+```{r}
+table(is.na(Airlines))
+```
+
+Calculating the proportion of missing values in each column using the `colMeans(is.na())` function
+```{r}
+colMeans(is.na(Airlines))
+```
+
+Filtering out incomplete cases using the `complete.cases()` function from the dataset and checking if there are any missing values in each column.
+```{r}
+Airlines<- Airlines[complete.cases(Airlines), ]
+colMeans(is.na(Airlines))
+```
+
+
+```{r}
+table(is.na(Airlines))
+```
+
+```{r}
+NROW(Airlines)
+```
+Using the `sample()` function, a random sample of size 10,000 from the integers 1 through 103,594 without replacement, and using `set.seed()` function to set fixed seed for reproducibility.
+```{r}
+set.seed(123)
+x<- sample(1:103594, size = 10000, replace = FALSE)
+```
+
+
+New dataset after random sampling of 10000 rows
+```{r}
+Airlines<- Airlines[x,]
+dim(Airlines)
+```
+Descriptive Statistics
+
+Summary of the Airlines dataset using the `summary() function
+```{r}
+summary(Airlines)
+```
+The `introduce()` function provides a comprehensive overview of the dataset.
+```{r}
+introduce(Airlines)
+```
+
+Using the `skim()` to generate summary statistics and data overview for the Airlines dataset.
+```{r}
+skim(Airlines)
+```
+
+calculating mode for age and flight distance using `mlv()` and `method="mfv"`
+```{r}
+mode_age<- mlv(Airlines$Age, method = "mfv")
+mode_flightdist<- mlv(Airlines$Flight.Distance, method = "mfv")
+print(paste("The mode of age is:",mode_age))
+print(paste("The mode of flight distance in miles is:",mode_flightdist))
+```
+
+calculating Quartile for age using `quantile()` function
+```{r}
+quantile_Airlines_age<- quantile(Airlines$Age)
+quantile_Airlines_age
+```
+
+calculating Quartile for flight distance using `quantile()` function
+```{r}
+quantile_Airlines_flightDist<- quantile(Airlines$Flight.Distance)
+quantile_Airlines_flightDist
+```
+
+Calculating the interquartile range (IQR) for the 'Age' and 'Flight.Distance' variables using the `IQR()` and printing the results using `print(paste))` function
+```{r}
+iqr_age<- IQR(Airlines$Age)
+iqr_flightdist<- IQR(Airlines$Flight.Distance)
+print(paste("The interqurtile range for age is:", iqr_age))
+print(paste("The interqurtile range for flight distance is:", iqr_flightdist))
+```
+
+calculating the standard deviation for age and flight distance using `sd()` funtion and then results using `print(paste))` function
+```{r}
+sd_age<- sd(Airlines$Age)
+sd_flightdist<- sd(Airlines$Flight.Distance)
+print(paste("The standard deviation of age is:", sd_age))
+print(paste("The standard deviation of flight distance is:", sd_flightdist))
+```
+
+calculating the standard deviation for age and flight distance using `sd()` function and then results using `print(paste))` function
+```{r}
+range_age<- range(Airlines$Age)
+range_flightdist<- range(Airlines$Flight.Distance)
+range_age
+range_flightdist
+```
+
+calculating variance for age and flight distance using the `var()` function
+```{r}
+var_age<- var(Airlines$Age)
+var_flightdist<- var(Airlines$Flight.Distance)
+var_age
+var_flightdist
+```
+The `barplot()` function is used with `Age` on the y-axis and `Flight.Distance` on the x-axis, `names.arg` specifies the labels for the x-axis (Flight Distances), `xlab` and `ylab` are used to label the x-axis and y-axis.
+```{r}
+barplot(Airlines$Age, Airlines$Flight.Distance, col = "blue")
+```
+Creating a histogram to visualize the distribution of Flight Distances in the Airlines dataset
+The `hist()` function is used with `Flight.Distance` as the input variable, `col` specifies the color of the bars in the histogram, `main` provides a title for the histogram and
+`breaks` controls the number of bins or intervals in the histogram.
+
+```{r}
+hist(Airlines$Flight.Distance, col = "black", main = "Historgram of flight distance", breaks = 1000, xlab = "Flight distance")
+```
+Creating a scatter plot using ggplot2 to visualize the relationship between Gender and Flight Distance
+The `ggplot()` function starts the plot with the Airlines dataset, `aes()` specifies the aesthetic mappings, with `Gender` mapped to the x-axis and 'Flight.Distance' mapped to the y-axis. color' is set to "black" to specify the color of the points. `geom_point()` adds points to the plot. `labs()` sets the title, x-axis label, and y-axis label for the plot.
+
+```{r}
+ggplot(data = Airlines, aes(x = Gender, y = Flight.Distance, color = "black")) +
+  geom_point() +
+  labs(title = "Flight distance vs. Gender",
+       x = "Gender",
+       y = "Flight distance")
+```
+Data frame with the numerical variables
+```{r}
+num_matrix <- Airlines[c("Age","Flight.Distance", "Departure.Delay.in.Minutes", "Arrival.Delay.in.Minutes")]
+head(num_matrix)
+```
+
+Removing the column named `X` from the Airlines dataset
+```{r}
+Airlines <- Airlines[, !(names(Airlines) == "X")]
+head(Airlines)
+```
+
+Remove the column named `id` from the Airlines dataset
+```{r}
+Airlines <- Airlines[, !(names(Airlines) == "id")]
+head(Airlines)
+```
+
+Using `pairs()` function to see the relationship between different variables
+```{r}
+pairs(num_matrix)
+```
+
+Using the `describe()` function from the "psych" package to generate descriptive statistics for the Airlines dataset
+```{r}
+library(psych)
+describe(Airlines)
+```
+Computing the correlation matrix for the numerical variables
+```{r}
+cor_matrix <- data.frame(cor(num_matrix))
+head(cor_matrix)
+```
+
+Adding an index column to the Airlines dataset 
+```{r}
+Airlines$Index <- 1:nrow(Airlines) 
+head(Airlines)
+```
+Reordering columns in the Airlines dataset to move the last column to the first position
+```{r}
+Airlines <- Airlines %>%
+  select(ncol(Airlines), 1:(ncol(Airlines)-1))
+head(Airlines)
+```
+
+Dummy coding categorical variables in the dataset to convert them into binary using the `dummyVars()` function
+```{r}
+Gender_dummy<- ordered(Airlines$Gender)
+Gender_dummy<- dummyVars(~Gender, data = Airlines)
+gd<- predict(Gender_dummy, Airlines)
+Class_dummy<- ordered(Airlines$Class)
+Class_dummy<- dummyVars(~Class, data = Airlines)
+cd<-predict(Class_dummy, Airlines)
+Customer_dummy<- ordered(Airlines$Customer.Type)
+Customer_dummy<- dummyVars(~Customer.Type, data = Airlines)
+custd<-predict(Customer_dummy, Airlines)
+Travel_dummy<- ordered(Airlines$Type.of.Travel)
+Travel_dummy<- dummyVars(~Type.of.Travel, data = Airlines)
+td<-predict(Travel_dummy, Airlines)
+Satisfy_dummy<- ordered(Airlines$satisfaction)
+Satisfy_dummy<- dummyVars(~satisfaction, data = Airlines)
+sd<-predict(Satisfy_dummy, Airlines)
+Airlines_dummy<- cbind(Airlines,gd,cd,custd,td,sd)
+head(Airlines_dummy)
+dim(Airlines_dummy)
+```
+Creating a new dataframe named `main_df` that includes all the numerical variables and categorical variables after dummy coding
+```{r}
+main_df<- data.frame(num_matrix, Airlines$Inflight.wifi.service, Airlines$Departure.Arrival.time.convenient, Airlines$Ease.of.Online.booking, Airlines$Gate.location, Airlines$Food.and.drink, Airlines$Online.boarding, Airlines$Seat.comfort, Airlines$Inflight.entertainment, Airlines$On.board.service, Airlines$Leg.room.service, Airlines$Baggage.handling, Airlines$Checkin.service, Airlines$Inflight.service, Airlines$Cleanliness, Airlines_dummy$GenderFemale, Airlines_dummy$ClassBusiness, Airlines_dummy$ClassEco, Airlines_dummy$`Customer.Typedisloyal Customer`, Airlines_dummy$`Type.of.TravelBusiness travel`, Airlines_dummy$satisfactionsatisfied)
+
+colnames(main_df)<- c("Age", "Flight.Distance", "Departure.Delay.in.Minutes", "Arrival.Delay.in.Minutes", "Inflight.wifi.service", "Departure.Arrival.time.convenient", "Ease.of.Online.booking", "Gate.location", "Food.and.drink", "Online.boarding", "Seat.comfort", "Inflight.entertainment", "On.board.service", "Leg.room.service", "Baggage.handling", "Checkin.service", "Inflight.service", "Cleanliness", "GenderFemale", "ClassBusiness", "ClassEco", "Customer.Typedisloyal.Customer", "Type.of.TravelBusiness.travel", "satisfactionsatisfied")
+
+head(main_df)
+```
+
+```{r}
+dim(main_df)
+```
+
+using `boxplot()` function to visualize the distribution of ages and to check for outliers.
+```{r}
+boxplot(main_df$Age, main= "Boxplot for age")
+```
+using `boxplot()` function for visualization of flight distance and to check for outliers.
+```{r}
+boxplot(main_df$Flight.Distance, main= "Boxplot for flight distance")
+```
+
+Feature selection using ANOVA, PCA and ROC curve 
+The lm_model represents the linear regression model with `satisfactionsatisfied` as the dependent variable, performing ANOVA (Analysis of Variance), The `anova()` function calculates the analysis of variance for the linear regression model,it also provides information about the significance of each variable in predicting the dependent variable.
+Using `print()` function to view the results
+```{r}
+lm_model <- lm(satisfactionsatisfied
+ ~ ., data = main_df) 
+anova_result <- anova(lm_model)
+print(anova_result)
+```
+
+
+```{r}
+colnames(anova_result)<- c("df", "Sum Sq", "Mean Sq", "f_value", "Pr_f")
+print(anova_result)
+``` 
+Arranging the ANOVA results in descending order using `arrange()` function the based on the F-values
+```{r}
+sorted_anova<- arrange(anova_result, desc(f_value))
+print(sorted_anova)
+```
+The `pairs.panels()` function from the psych package creates scatterplot matrices for all pairs of variables, excluding the 24th variable (`satisfactionsatisfied`).
+```{r}
+library(psych)
+pairs.panels(main_df[,-24],
+             gap=0,
+             bg = c("red", "yellow", "blue")[main_df$satisfactionsatisfied],
+             pch=21)
+```
+
+The `prcomp()` function from the stats package is used to perform PCA on the dataset, excluding the 24th variable (`satisfactionsatisfied`), and the `attributes()` function is used to access the attributes of the pc object
+```{r}
+pc <- prcomp(main_df[,-24],
+             center = TRUE,
+            scale. = TRUE)
+attributes(pc)
+```
+Viewing the results of principal component analysis
+```{r}
+print(pc)
+```
+
+```{r}
+summary(pc)
+```
+
+
+
+Visualization Of PCA
+```{r}
+# Perform PCA
+pca_result <- prcomp(main_df, center = TRUE, scale. = TRUE)
+
+# Load the factoextra package if not already loaded
+library(factoextra)
+
+# Visualize variables in the principal component space (biplot)
+fviz_pca_var(pca_result, col.var = "cos2",
+             gradient.cols = c("blue", "orange", "green"),
+             repel = TRUE)
+```
+The `cor()` function shows the pairwise correlation coefficients between variables in the dataset, The `ggcorrplot()` function from the ggcorrplot package creates a graphical representation of the correlation matrix.
+```{r}
+cor_matrix <- data.frame(cor(main_df))
+ggcorrplot(cor_matrix)
+```
+The `filterVarImp()` function from the caret package calculates variable importance scores based on ROC curve area.
+```{r}
+#use roc_curve area as score
+roc_imp <- filterVarImp(x = main_df[ ,1:24], y = main_df$satisfactionsatisfied)
+
+#sort the score in decreasing order
+roc_imp <- data.frame(cbind(variable = rownames(roc_imp), score = roc_imp[,1]))
+roc_imp$score <- as.double(roc_imp$score)
+print(roc_imp[order(roc_imp$score,decreasing = TRUE),])
+```
+
+```{r}
+head(main_df)
+```
+
+```{r}
+main_df<- main_df[c("Online.boarding","Seat.comfort","On.board.service","Leg.room.service","Inflight.wifi.service","Type.of.TravelBusiness.travel","ClassBusiness","satisfactionsatisfied")]
+```
+
+PCA After Feature Selection
+```{r}
+library(psych)
+pairs.panels(main_df[,-8],
+             gap=0,
+             bg = c("red", "yellow", "blue")[main_df$satisfactionsatisfied],
+             pch=21)
+```
+
+PCA Visualisation on Selected Features
+```{r}
+# Perform PCA
+pca_result <- prcomp(main_df, center = TRUE, scale. = TRUE)
+
+# Load the factoextra package if not already loaded
+library(factoextra)
+
+# Visualize variables in the principal component space (biplot)
+fviz_pca_var(pca_result, col.var = "cos2",
+             gradient.cols = c("blue", "orange", "green"),
+             repel = TRUE)
+``` 
+Normalizing numerical variables in `num_matrix` using the range method.  
+```{r}
+norm_model<- preProcess(num_matrix, method=c("range")) ##min-max normalization
+model<- predict(norm_model, num_matrix)
+```
+
+
+```{r}
+main_model<- data.frame(main_df) 
+head(main_model)
+```
+
+
+
+
+```{r}
+dim(main_df)
+```
+
+
+Corrplot after Feature selection:
+```{r}
+corr_fe<- data.frame(cor(main_df))
+ggcorrplot(corr_fe)
+```
+Creating training and testing datasets by partitioning, with 60% of the data allocated to training and 40% to testing.
+```{r}
+## Partitioning the dataset
+ 
+t<- createDataPartition(main_df$Online.boarding, p=0.6, list = FALSE)
+train<- main_df[t, ]
+test<- main_df[-t, ]
+``` 
+
+Creating datasets for training and testing containing only predictor variables.
+```{r}
+train_predictors<- train[ ,1:7]
+test_predictors<- test[ ,1:7]
+```
+
+Creating datasets for training and testing containing only the target variable `satisfactionsatisfied`.
+```{r}
+train_labels<-train[ ,8]
+test_labels<-test[ ,8]
+```
+
+Performing k-nearest neighbors (knn) classification using various values of k, specified in the `search.grid`, to find the optimal value for the number of neighbors.
+```{r}
+search.grid<- expand.grid(k=c(2,7,9,15))
+k_value<- train(satisfactionsatisfied ~ ., data = main_df, method= "knn", tuneGrid= search.grid)
+k_value
+```
+Building a k-nearest neighbors (kNN) classification model using cross-validation (cv) with 100 folds to optimize model performance.
+```{r}
+train_control <- trainControl(method = "cv", number = 100)
+knn_model <- train(satisfactionsatisfied ~ ., data = main_df, method = "knn",
+                   trControl = train_control,
+                   tuneLength = 20)
+print(knn_model)
+```
+
+According to cross validation, Predicting labels for the test dataset using the k-nearest neighbors (kNN) algorithm with k=5, trained on the training dataset.
+```{r}
+predicted_test_lables<- knn(train_predictors, test_predictors, cl=train_labels, k=5)
+head(predicted_test_lables)
+```
+Generating a cross-tabulation between the actual test labels and the predicted labels obtained from the k-nearest neighbors (kNN) algorithm.
+```{r}
+CrossTable(x=test$satisfactionsatisfied, y=predicted_test_lables, prop.chisq = FALSE)
+```
+
+Building a Naive Bayes classification model using the train dataset and then using the model to predict labels for the test dataset.
+```{r}
+library(e1071)
+nb_model<- naiveBayes(satisfactionsatisfied~ ., data=train)
+predicted_test_lables_nb<- predict(nb_model, test)
+```
+
+Generating a cross-tabulation between the actual satisfaction labels in the test dataset and the predicted labels obtained from the Naive Bayes classification model.
+```{r}
+CrossTable(x=test$satisfactionsatisfied, y=predicted_test_lables_nb, prop.chisq = FALSE)
+```
+
+The `predict()` function is used to generate predicted labels for the test dataset `test` 
+```{r}
+predicted_test_lables_nb<- predict(nb_model, test, type = "raw")
+dim(predicted_test_lables_nb)
+```
+
+
+```{r}
+roc(test$satisfactionsatisfied, predicted_test_lables_nb[,1])
+```
+Generating a ROC curve to evaluate the performance of the Naive Bayes classification model in predicting satisfaction using the `plot.roc()` function
+```{r}
+plot.roc(test$satisfactionsatisfied, predicted_test_lables_nb[,1])
+```
+

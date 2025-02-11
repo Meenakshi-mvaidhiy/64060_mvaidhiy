@@ -1,0 +1,460 @@
+---
+title: "Final project"
+author: "Meenakshi Vaidhiyanathan"
+date: "2024-04-21"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE )
+library(readr)
+library(class)
+library(ISLR)
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(pROC)
+library(gmodels)
+library(modeest)
+library(moments)
+library(ggcorrplot)
+library(car)
+library(DataExplorer)
+library(skimr)
+```
+
+```{r}
+Airlines <- read.csv("~/Desktop/Final project/Airlines.csv")
+head(Airlines)
+```
+
+```{r}
+dim(Airlines)
+```
+
+```{r}
+str(Airlines)
+```
+
+missing values
+```{r}
+table(is.na(Airlines))
+```
+
+```{r}
+colMeans(is.na(Airlines))
+```
+
+
+```{r}
+Airlines<- Airlines[complete.cases(Airlines), ]
+colMeans(is.na(Airlines))
+```
+
+
+```{r}
+table(is.na(Airlines))
+```
+
+```{r}
+NROW(Airlines)
+```
+Random sampling 
+```{r}
+set.seed(123)
+x<- sample(1:103594, size = 10000, replace = FALSE)
+```
+New dataset after random sampling of 10000 rows
+```{r}
+Airlines<- Airlines[x,]
+dim(Airlines)
+```
+
+```{r}
+summary(Airlines)
+```
+```{r}
+introduce(Airlines)
+```
+```{r}
+skim(Airlines)
+```
+
+
+```{r}
+mode_age<- mlv(Airlines$Age, method = "mfv")
+mode_flightdist<- mlv(Airlines$Flight.Distance, method = "mfv")
+print(paste("The mode of age is:",mode_age))
+print(paste("The mode of flight distance in miles is:",mode_flightdist))
+```
+
+```{r}
+quantile_Airlines_age<- quantile(Airlines$Age)
+quantile_Airlines_age
+```
+
+```{r}
+quantile_Airlines_flightDist<- quantile(Airlines$Flight.Distance)
+quantile_Airlines_flightDist
+```
+
+```{r}
+iqr_age<- IQR(Airlines$Age)
+iqr_flightdist<- IQR(Airlines$Flight.Distance)
+print(paste("The interqurtile range for age is:", iqr_age))
+print(paste("The interqurtile range for flight distance is:", iqr_flightdist))
+```
+
+```{r}
+sd_age<- sd(Airlines$Age)
+sd_flightdist<- sd(Airlines$Flight.Distance)
+print(paste("The standard deviation of age is:", sd_age))
+print(paste("The standard deviation of flight distance is:", sd_flightdist))
+```
+
+```{r}
+range_age<- range(Airlines$Age)
+range_flightdist<- range(Airlines$Flight.Distance)
+range_age
+range_flightdist
+```
+
+```{r}
+var_age<- var(Airlines$Age)
+var_flightdist<- var(Airlines$Flight.Distance)
+var_age
+var_flightdist
+```
+
+```{r}
+barplot(Airlines$Age, Airlines$Flight.Distance, col = "blue")
+```
+
+
+```{r}
+hist(Airlines$Flight.Distance, col = "black", main = "Historgram of flight distance", breaks = 1000, xlab = "Flight distance")
+```
+
+
+
+```{r}
+ggplot(data = Airlines, aes(x = Gender, y = Flight.Distance, color = "black")) +
+  geom_point() +
+  labs(title = "Flight distance vs. Gender",
+       x = "Gender",
+       y = "Flight distance")
+```
+Numerical vairables of dataset
+```{r}
+num_matrix <- Airlines[c("Age","Flight.Distance", "Departure.Delay.in.Minutes", "Arrival.Delay.in.Minutes")]
+head(num_matrix)
+```
+
+Removing redundant variables
+```{r}
+Airlines <- Airlines[, !(names(Airlines) == "X")]
+head(Airlines)
+```
+
+Removing redundant variables
+```{r}
+Airlines <- Airlines[, !(names(Airlines) == "id")]
+head(Airlines)
+```
+
+Pairs for numerical variables 
+```{r}
+pairs(num_matrix)
+```
+
+
+```{r}
+library(psych)
+describe(Airlines)
+```
+
+```{r}
+cor_matrix <- data.frame(cor(num_matrix))
+head(cor_matrix)
+```
+
+
+```{r}
+Airlines$Index <- 1:nrow(Airlines) 
+head(Airlines)
+```
+
+```{r}
+Airlines <- Airlines %>%
+  select(ncol(Airlines), 1:(ncol(Airlines)-1))
+head(Airlines)
+```
+
+
+```{r}
+Gender_dummy<- ordered(Airlines$Gender)
+Gender_dummy<- dummyVars(~Gender, data = Airlines)
+gd<- predict(Gender_dummy, Airlines)
+Class_dummy<- ordered(Airlines$Class)
+Class_dummy<- dummyVars(~Class, data = Airlines)
+cd<-predict(Class_dummy, Airlines)
+Customer_dummy<- ordered(Airlines$Customer.Type)
+Customer_dummy<- dummyVars(~Customer.Type, data = Airlines)
+custd<-predict(Customer_dummy, Airlines)
+Travel_dummy<- ordered(Airlines$Type.of.Travel)
+Travel_dummy<- dummyVars(~Type.of.Travel, data = Airlines)
+td<-predict(Travel_dummy, Airlines)
+Satisfy_dummy<- ordered(Airlines$satisfaction)
+Satisfy_dummy<- dummyVars(~satisfaction, data = Airlines)
+sd<-predict(Satisfy_dummy, Airlines)
+Airlines_dummy<- cbind(Airlines,gd,cd,custd,td,sd)
+head(Airlines_dummy)
+dim(Airlines_dummy)
+```
+
+
+```{r}
+main_df<- data.frame(num_matrix, Airlines$Inflight.wifi.service, Airlines$Departure.Arrival.time.convenient, Airlines$Ease.of.Online.booking, Airlines$Gate.location, Airlines$Food.and.drink, Airlines$Online.boarding, Airlines$Seat.comfort, Airlines$Inflight.entertainment, Airlines$On.board.service, Airlines$Leg.room.service, Airlines$Baggage.handling, Airlines$Checkin.service, Airlines$Inflight.service, Airlines$Cleanliness, Airlines_dummy$GenderFemale, Airlines_dummy$ClassBusiness, Airlines_dummy$ClassEco, Airlines_dummy$`Customer.Typedisloyal Customer`, Airlines_dummy$`Type.of.TravelBusiness travel`, Airlines_dummy$satisfactionsatisfied)
+
+colnames(main_df)<- c("Age", "Flight.Distance", "Departure.Delay.in.Minutes", "Arrival.Delay.in.Minutes", "Inflight.wifi.service", "Departure.Arrival.time.convenient", "Ease.of.Online.booking", "Gate.location", "Food.and.drink", "Online.boarding", "Seat.comfort", "Inflight.entertainment", "On.board.service", "Leg.room.service", "Baggage.handling", "Checkin.service", "Inflight.service", "Cleanliness", "GenderFemale", "ClassBusiness", "ClassEco", "Customer.Typedisloyal.Customer", "Type.of.TravelBusiness.travel", "satisfactionsatisfied")
+
+head(main_df)
+```
+
+```{r}
+dim(main_df)
+```
+
+
+```{r}
+boxplot(main_df$Age, main= "Boxplot for age")
+```
+
+```{r}
+boxplot(main_df$Flight.Distance, main= "Boxplot for flight distance")
+```
+
+
+Feature selection using ANOVA, PCA and ROC curve 
+```{r}
+lm_model <- lm(satisfactionsatisfied
+ ~ ., data = main_df) 
+anova_result <- anova(lm_model)
+print(anova_result)
+```
+
+
+```{r}
+colnames(anova_result)<- c("df", "Sum Sq", "Mean Sq", "f_value", "Pr_f")
+print(anova_result)
+``` 
+
+```{r}
+sorted_anova<- arrange(anova_result, desc(f_value))
+print(sorted_anova)
+```
+
+pairs function 
+```{r}
+library(psych)
+pairs.panels(main_df[,-24],
+             gap=0,
+             bg = c("red", "yellow", "blue")[main_df$satisfactionsatisfied],
+             pch=21)
+```
+
+PCA method of feature selection 
+```{r}
+pc <- prcomp(main_df[,-24],
+             center = TRUE,
+            scale. = TRUE)
+attributes(pc)
+```
+
+```{r}
+print(pc)
+```
+
+```{r}
+summary(pc)
+```
+
+visualisation of PCA
+```{r}
+# Perform PCA
+pca_result <- prcomp(main_df, center = TRUE, scale. = TRUE)
+
+# Load the factoextra package if not already loaded
+library(factoextra)
+
+# Visualize variables in the principal component space (biplot)
+fviz_pca_var(pca_result, col.var = "cos2",
+             gradient.cols = c("blue", "orange", "green"),
+             repel = TRUE)
+```
+
+
+Corrplot
+```{r}
+cor_matrix <- data.frame(cor(main_df))
+ggcorrplot(cor_matrix)
+```
+
+
+ 
+
+ROC scoring for feature selection
+```{r}
+#use roc_curve area as score
+roc_imp <- filterVarImp(x = main_df[ ,1:24], y = main_df$satisfactionsatisfied)
+
+#sort the score in decreasing order
+roc_imp <- data.frame(cbind(variable = rownames(roc_imp), score = roc_imp[,1]))
+roc_imp$score <- as.double(roc_imp$score)
+print(roc_imp[order(roc_imp$score,decreasing = TRUE),])
+```
+
+```{r}
+head(main_df)
+```
+
+
+After feature selection confirmation 
+```{r}
+main_df<- main_df[c("Online.boarding","Seat.comfort","On.board.service","Leg.room.service","Inflight.wifi.service","Type.of.TravelBusiness.travel","ClassBusiness","satisfactionsatisfied")]
+```
+
+
+```{r}
+library(psych)
+pairs.panels(main_df[,-8],
+             gap=0,
+             bg = c("red", "yellow", "blue")[main_df$satisfactionsatisfied],
+             pch=21)
+```
+
+PCA confirmation 
+```{r}
+# Perform PCA
+pca_result <- prcomp(main_df, center = TRUE, scale. = TRUE)
+
+# Load the factoextra package if not already loaded
+library(factoextra)
+
+# Visualize variables in the principal component space (biplot)
+fviz_pca_var(pca_result, col.var = "cos2",
+             gradient.cols = c("blue", "orange", "green"),
+             repel = TRUE)
+``` 
+
+
+
+##normalization
+```{r}
+norm_model<- preProcess(num_matrix, method=c("range")) 
+model<- predict(norm_model, num_matrix)
+```
+
+
+```{r}
+main_model<- data.frame(main_df) 
+
+head(main_model)
+```
+
+
+
+
+```{r}
+dim(main_df)
+```
+
+
+Corrlot after Feature selection
+```{r}
+corr_fe<- data.frame(cor(main_df))
+ggcorrplot(corr_fe)
+```
+
+
+```{r}
+## Partitioning the dataset
+ 
+t<- createDataPartition(main_df$Online.boarding, p=0.6, list = FALSE)
+train<- main_df[t, ]
+test<- main_df[-t, ]
+``` 
+
+
+```{r}
+train_predictors<- train[ ,1:7]
+test_predictors<- test[ ,1:7]
+```
+
+##test label and train labels
+```{r}
+train_labels<-train[ ,8]
+test_labels<-test[ ,8]
+```
+
+
+```{r}
+search.grid<- expand.grid(k=c(2,7,9,15))
+k_value<- train(satisfactionsatisfied ~ ., data = main_df, method= "knn", tuneGrid= search.grid)
+k_value
+```
+
+
+
+```{r}
+train_control <- trainControl(method = "cv", number = 100)
+knn_model <- train(satisfactionsatisfied ~ ., data = main_df, method = "knn",
+                   trControl = train_control,
+                   tuneLength = 20)
+print(knn_model)
+```
+
+##According to cross validation, k value =7 and implementation of knn
+```{r}
+predicted_test_lables<- knn(train_predictors, test_predictors, cl=train_labels, k=5)
+head(predicted_test_lables)
+```
+
+##CrossTable(x=test_labels, y=predicted_test_lables, prop.chisq = FALSE)
+
+```{r}
+CrossTable(x=test$satisfactionsatisfied, y=predicted_test_lables, prop.chisq = FALSE)
+```
+
+
+##naive bayes
+```{r}
+library(e1071)
+nb_model<- naiveBayes(satisfactionsatisfied~ ., data=train)
+predicted_test_lables_nb<- predict(nb_model, test)
+```
+
+
+```{r}
+CrossTable(x=test$satisfactionsatisfied, y=predicted_test_lables_nb, prop.chisq = FALSE)
+```
+
+
+```{r}
+predicted_test_lables_nb<- predict(nb_model, test, type = "raw")
+dim(predicted_test_lables_nb)
+```
+
+
+
+```{r}
+roc(test$satisfactionsatisfied, predicted_test_lables_nb[,1])
+```
+
+```{r}
+plot.roc(test$satisfactionsatisfied, predicted_test_lables_nb[,1])
+```
+
